@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Countdown!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
+
+  :root {
+    --green-dark: #2d6a2d;
+    --green-mid: #3d8b3d;
+    --green-light: #5cb85c;
+    --green-pale: #c8f0c8;
+    --yellow: #f7c948;
+    --orange: #f0893a;
+    --cream: #fdf8ee;
+    --brown: #5a3e28;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--green-dark);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 80px 50px at 10% 20%, rgba(61,139,61,0.4) 0%, transparent 100%),
+      radial-gradient(ellipse 60px 40px at 85% 15%, rgba(92,184,92,0.3) 0%, transparent 100%),
+      radial-gradient(ellipse 100px 60px at 50% 80%, rgba(45,106,45,0.5) 0%, transparent 100%),
+      radial-gradient(ellipse 70px 45px at 20% 75%, rgba(61,139,61,0.3) 0%, transparent 100%),
+      radial-gradient(ellipse 90px 55px at 75% 60%, rgba(92,184,92,0.25) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .leaf {
+    position: fixed;
+    opacity: 0.15;
+    animation: floatLeaf linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes floatLeaf {
+    0%   { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+    10%  { opacity: 0.15; }
+    90%  { opacity: 0.12; }
+    100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+  }
+
+  .card {
+    position: relative;
+    z-index: 1;
+    background: var(--cream);
+    border-radius: 32px;
+    padding: 48px 52px 56px;
+    max-width: 520px;
+    width: 92vw;
+    text-align: center;
+    box-shadow: 0 8px 0 var(--green-dark), 0 12px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.8);
+    border: 3px solid var(--green-mid);
+  }
+
+  .snake-wrap { margin-bottom: 8px; display: flex; justify-content: center; }
+  .snake-wrap svg {
+    width: 120px; height: 90px;
+    filter: drop-shadow(0 4px 8px rgba(45,106,45,0.3));
+    animation: snakeBob 3s ease-in-out infinite;
+  }
+  @keyframes snakeBob {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%       { transform: translateY(-8px) rotate(2deg); }
+  }
+
+  .main-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    color: var(--green-dark);
+    line-height: 1.15;
+    margin-bottom: 6px;
+  }
+  .main-title span { color: var(--orange); }
+
+  .subtitle {
+    font-size: 0.95rem; color: #7a8a6a;
+    font-weight: 600; margin-bottom: 32px;
+  }
+
+  .countdown {
+    display: flex; gap: 14px;
+    justify-content: center; margin-bottom: 28px; flex-wrap: wrap;
+  }
+
+  .unit {
+    background: var(--green-dark); border-radius: 18px;
+    padding: 16px 18px 12px; min-width: 90px; flex: 1;
+    box-shadow: 0 4px 0 #1a3d1a, 0 6px 16px rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+  }
+  .unit:hover { transform: translateY(-2px); }
+
+  .unit-number {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.4rem, 6vw, 3rem);
+    color: var(--yellow); line-height: 1; display: block;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.25);
+    transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .unit-number.bump { transform: scale(1.2); color: #fff; }
+  .unit-label {
+    font-size: 0.75rem; color: var(--green-pale);
+    font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; margin-top: 4px;
+  }
+
+  .progress-wrap {
+    background: #e8f5e8; border-radius: 20px; height: 18px;
+    overflow: hidden; border: 2px solid var(--green-pale);
+    margin-bottom: 10px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green-light), var(--yellow));
+    border-radius: 20px; transition: width 1s linear;
+    position: relative; overflow: hidden;
+  }
+  .progress-bar::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.15) 8px, rgba(255,255,255,0.15) 16px);
+  }
+  .progress-label {
+    font-size: 0.78rem; color: #7a8a6a;
+    font-weight: 700; margin-bottom: 28px;
+  }
+
+  .message {
+    background: linear-gradient(135deg, #e8f7e8, #f0fdf0);
+    border: 2px dashed var(--green-light); border-radius: 16px;
+    padding: 14px 18px; font-size: 0.92rem;
+    color: var(--green-dark); font-weight: 700; line-height: 1.4;
+  }
+
+  .card.completed .main-title { color: var(--orange); }
+  .completed-banner {
+    display: none;
+    background: linear-gradient(135deg, var(--yellow), var(--orange));
+    border-radius: 18px; padding: 20px; margin-bottom: 24px;
+    font-family: 'Fredoka One', cursive; font-size: 1.5rem;
+    color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    animation: pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 4px 0 #c06020, 0 6px 20px rgba(240,137,58,0.4);
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+  .card.completed .completed-banner { display: block; }
+  .card.completed .progress-bar { background: linear-gradient(90deg, var(--green-light), var(--yellow), var(--orange)); }
+
+  .loading-overlay {
+    position: absolute; inset: 0;
+    background: rgba(253,248,238,0.92); border-radius: 30px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 5; gap: 12px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid var(--green-pale);
+    border-top-color: var(--green-mid);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-overlay p { font-family: 'Fredoka One', cursive; color: var(--green-dark); font-size: 1rem; }
+
+  .config-warning {
+    display: none;
+    background: #fff3cd; border: 2px solid #f0ad4e; border-radius: 12px;
+    padding: 12px 16px; font-size: 0.8rem; font-weight: 700;
+    color: #7a5a00; margin-bottom: 16px; line-height: 1.5;
+  }
+
+  .cog-btn {
+    position: fixed; bottom: 20px; right: 20px; z-index: 10;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.5); font-size: 1.3rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; backdrop-filter: blur(4px);
+  }
+  .cog-btn:hover { background: rgba(255,255,255,0.22); color: rgba(255,255,255,0.9); transform: rotate(45deg); }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 100;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--cream); border-radius: 24px;
+    padding: 36px 40px; width: 90vw; max-width: 420px;
+    border: 3px solid var(--green-mid);
+    box-shadow: 0 8px 0 var(--green-dark), 0 16px 48px rgba(0,0,0,0.4);
+    animation: modalIn 0.3s cubic-bezier(.34,1.56,.64,1);
+    max-height: 90vh; overflow-y: auto;
+  }
+  @keyframes modalIn {
+    from { transform: scale(0.85) translateY(20px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .modal h2 { font-family: 'Fredoka One', cursive; font-size: 1.6rem; color: var(--green-dark); margin-bottom: 6px; }
+  .modal .modal-sub { font-size: 0.82rem; color: #7a8a6a; font-weight: 600; margin-bottom: 24px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .field-group { margin-bottom: 16px; text-align: left; }
+  .field-group label {
+    display: block; font-size: 0.78rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--green-dark); margin-bottom: 6px;
+  }
+  .field-group input {
+    width: 100%; padding: 10px 14px;
+    border: 2px solid var(--green-pale); border-radius: 10px;
+    font-family: 'Nunito', sans-serif; font-size: 0.95rem;
+    font-weight: 600; color: var(--brown); background: white;
+    transition: border-color 0.2s; outline: none;
+  }
+  .field-group input:focus { border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(92,184,92,0.15); }
+
+  .btn {
+    width: 100%; padding: 12px; border: none; border-radius: 12px;
+    font-family: 'Nunito', sans-serif; font-size: 1rem; font-weight: 800;
+    cursor: pointer; transition: all 0.15s; margin-bottom: 10px;
+  }
+  .btn:active { transform: translateY(2px); }
+  .btn-primary { background: var(--green-mid); color: white; box-shadow: 0 4px 0 var(--green-dark); }
+  .btn-primary:hover { background: var(--green-light); }
+  .btn-danger { background: #e05555; color: white; box-shadow: 0 4px 0 #a03030; }
+  .btn-danger:hover { background: #ec6666; }
+  .btn-blue { background: #4a90d9; color: white; box-shadow: 0 4px 0 #2a60a9; }
+  .btn-blue:hover { background: #5aa0e9; }
+  .btn-ghost { background: transparent; color: #9aaa8a; box-shadow: none; font-size: 0.88rem; padding: 8px; }
+  .btn-ghost:hover { color: var(--green-dark); }
+
+  .msg-box { font-size: 0.83rem; font-weight: 700; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; display: none; }
+  .msg-box.error   { background: #fde8e8; color: #c03030; display: block; }
+  .msg-box.success { background: #e8fde8; color: #2a6a2a; display: block; }
+
+  .admin-option {
+    background: white; border: 2px solid var(--green-pale);
+    border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; text-align: left;
+  }
+  .admin-option h3 { font-family: 'Fredoka One', cursive; font-size: 1.05rem; color: var(--green-dark); margin-bottom: 4px; }
+  .admin-option p { font-size: 0.78rem; color: #8a9a7a; font-weight: 600; margin-bottom: 12px; }
+
+  .start-date-info { font-size: 0.75rem; color: #9aaa8a; font-weight: 600; text-align: center; margin-top: 14px; }
+  #started-on { font-weight: 800; color: var(--green-dark); }
+
+  .setup-box {
+    background: #f0f7ff; border: 2px solid #90c0f0; border-radius: 12px;
+    padding: 14px 16px; font-size: 0.78rem; color: #2a4a7a;
+    font-weight: 600; line-height: 1.7; margin-bottom: 16px; text-align: left;
+  }
+  .setup-box ol { padding-left: 18px; }
+  .setup-box li { margin-bottom: 4px; }
+  .setup-box code { background: #ddeeff; padding: 1px 5px; border-radius: 4px; font-size: 0.85em; font-family: monospace; }
+
+  .status-badge {
+    display: inline-block; padding: 4px 12px; border-radius: 20px;
+    font-size: 0.78rem; font-weight: 800; margin-bottom: 16px;
+  }
+  .status-badge.ok  { background: #e8fde8; color: #2a6a2a; border: 2px solid #a0dba0; }
+  .status-badge.bad { background: #fde8e8; color: #c03030; border: 2px solid #f0a0a0; }
+  .status-badge.warn{ background: #fff3cd; color: #7a5a00; border: 2px solid #f0c060; }
+</style>
+</head>
+<body>
+
+<div class="leaf" style="left:8%;animation-duration:18s;animation-delay:0s;font-size:1.5rem;">🍃</div>
+<div class="leaf" style="left:22%;animation-duration:22s;animation-delay:4s;font-size:2rem;">🌿</div>
+<div class="leaf" style="left:55%;animation-duration:16s;animation-delay:2s;font-size:1.8rem;">🍀</div>
+<div class="leaf" style="left:75%;animation-duration:20s;animation-delay:7s;font-size:1.4rem;">🍃</div>
+<div class="leaf" style="left:90%;animation-duration:24s;animation-delay:1s;font-size:2.2rem;">🌿</div>
+<div class="leaf" style="left:40%;animation-duration:19s;animation-delay:9s;font-size:1.6rem;">🍀</div>
+
+<div class="card" id="main-card">
+
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading your streak…</p>
+  </div>
+
+  <div class="config-warning" id="config-warning">
+    ⚠️ Firebase not set up yet — running on local storage for now.
+    Tap ⚙️ → Firebase Setup for instructions.
+  </div>
+
+  <div class="completed-banner">🎉 YOU DID IT! TIME TO GET A SNAKE! 🐍</div>
+
+  <div class="snake-wrap">
+    <svg viewBox="0 0 120 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M90 65 Q110 65 110 50 Q110 30 90 30 Q60 30 60 50 Q60 70 85 75 Q105 78 108 65" stroke="#3d8b3d" stroke-width="14" stroke-linecap="round" fill="none"/>
+      <path d="M90 65 Q110 65 110 50 Q110 30 90 30 Q60 30 60 50 Q60 70 85 75 Q105 78 108 65" stroke="#5cb85c" stroke-width="10" stroke-linecap="round" fill="none" stroke-dasharray="6 4"/>
+      <path d="M90 65 Q110 65 110 50 Q110 30 90 30 Q60 30 60 50 Q60 70 85 75 Q105 78 108 65" stroke="#c8f0c8" stroke-width="5" stroke-linecap="round" fill="none"/>
+      <ellipse cx="40" cy="52" rx="18" ry="13" fill="#3d8b3d"/>
+      <ellipse cx="40" cy="52" rx="15" ry="10" fill="#5cb85c"/>
+      <circle cx="34" cy="47" r="4" fill="white"/>
+      <circle cx="34" cy="47" r="2.2" fill="#1a3d1a"/>
+      <circle cx="33" cy="46" r="0.8" fill="white"/>
+      <path d="M22 54 L14 51 M14 51 L10 48 M14 51 L10 54" stroke="#e05555" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="25" cy="52" r="1.2" fill="#2d6a2d"/>
+    </svg>
+  </div>
+
+  <h1 class="main-title">Keep those rooms tidy<br>and you'll get a <span>snake!</span> 🐍</h1>
+  <p class="subtitle">Clean room streak in progress…</p>
+
+  <div class="countdown">
+    <div class="unit"><span class="unit-number" id="cd-months">–</span><div class="unit-label">Months</div></div>
+    <div class="unit"><span class="unit-number" id="cd-days">–</span><div class="unit-label">Days</div></div>
+    <div class="unit"><span class="unit-number" id="cd-hours">–</span><div class="unit-label">Hours</div></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+  </div>
+  <p class="progress-label" id="progress-label">Loading…</p>
+  <div class="message" id="motivational-msg"><span>⭐</span> Loading your progress…</div>
+  <p class="start-date-info">Started: <span id="started-on">—</span></p>
+</div>
+
+<button class="cog-btn" id="cog-btn" title="Admin panel">⚙️</button>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+
+    <!-- LOGIN -->
+    <div class="panel active" id="panel-login">
+      <h2>🔒 Admin Access</h2>
+      <p class="modal-sub">Mum &amp; Dad only!</p>
+      <div class="msg-box" id="login-msg"></div>
+      <div class="field-group">
+        <label>Password</label>
+        <input type="password" id="login-pw" placeholder="Enter password" autocomplete="current-password"/>
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Unlock</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <p style="font-size:0.72rem;color:#b0c0a0;font-weight:600;text-align:center;margin-top:6px;">
+        First time? Default password is <strong>snake123</strong>
+      </p>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="panel" id="panel-admin">
+      <h2>⚙️ Admin Panel</h2>
+      <p class="modal-sub">Mum &amp; Dad controls</p>
+
+      <div class="admin-option">
+        <h3>🔑 Change Password</h3>
+        <p>Update the admin password. Stored on this device only.</p>
+        <div class="msg-box" id="pw-msg"></div>
+        <div class="field-group">
+          <label>New Password</label>
+          <input type="password" id="new-pw1" placeholder="New password"/>
+        </div>
+        <div class="field-group">
+          <label>Confirm Password</label>
+          <input type="password" id="new-pw2" placeholder="Confirm new password"/>
+        </div>
+        <button class="btn btn-primary" onclick="changePassword()">Save Password</button>
+      </div>
+
+      <div class="admin-option">
+        <h3>🔄 Reset Timer</h3>
+        <p>Restart the 6-month countdown from today. Use this if the girls slip up!</p>
+        <div class="msg-box" id="reset-msg"></div>
+        <button class="btn btn-danger" onclick="confirmReset()">Reset Timer to Today</button>
+      </div>
+
+      <div class="admin-option">
+        <h3>🔥 Firebase</h3>
+        <p>Cloud sync status and setup instructions.</p>
+        <button class="btn btn-blue" onclick="showPanel('panel-firebase')">Firebase Setup &amp; Status</button>
+      </div>
+
+      <button class="btn btn-ghost" onclick="closeModal()">← Close</button>
+    </div>
+
+    <!-- CONFIRM RESET -->
+    <div class="panel" id="panel-confirm">
+      <h2>⚠️ Are you sure?</h2>
+      <p class="modal-sub">This will restart the full 6 months from today.</p>
+      <p style="font-size:0.88rem;color:#7a5a3a;font-weight:700;margin-bottom:20px;line-height:1.5;">
+        The countdown will reset to today's date and sync to the cloud so every device updates. Make sure you've had a chat with the girls first!
+      </p>
+      <button class="btn btn-danger" onclick="doReset()">Yes, reset the timer</button>
+      <button class="btn btn-ghost" onclick="showPanel('panel-admin')">← Go back</button>
+    </div>
+
+    <!-- FIREBASE STATUS / SETUP -->
+    <div class="panel" id="panel-firebase">
+      <h2>🔥 Firebase</h2>
+      <div id="fb-status-badge" class="status-badge warn">Checking…</div>
+      <p class="modal-sub" id="fb-status-detail">Please wait</p>
+
+      <div class="setup-box">
+        <strong>One-time setup (~10 minutes):</strong>
+        <ol>
+          <li>Go to <strong>console.firebase.google.com</strong> and sign in with a Google account.</li>
+          <li>Click <strong>Add project</strong>, give it any name, skip Analytics.</li>
+          <li>In the left menu: <strong>Build → Realtime Database → Create database</strong>. Pick any region. Start in <strong>test mode</strong>.</li>
+          <li>Go to <strong>Project Settings</strong> (⚙️ top-left) → <strong>Your apps</strong> → click the <strong>&lt;/&gt; Web</strong> icon → register the app.</li>
+          <li>Copy the <code>firebaseConfig</code> object Firebase shows you.</li>
+          <li>Open <code>index.html</code> in any text editor. Find the block near the top of the &lt;script&gt; labelled <strong>FIREBASE CONFIG</strong>.</li>
+          <li>Replace the placeholder values with your copied config. Save the file.</li>
+          <li>Push to GitHub — done! Every device will now share the same start date.</li>
+        </ol>
+        <br>
+        <strong>Note on password:</strong> The admin password is saved per-device in the browser. Set it on each device after first login, or just use the default <code>snake123</code> and change it to the same thing on both your phones.
+      </div>
+
+      <button class="btn btn-ghost" onclick="showPanel('panel-admin')">← Back to Admin</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Firebase SDK v10 compat (works in plain HTML, no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  FIREBASE CONFIG — replace these values with your own           ║
+// ║  Get them from: Firebase Console → Project Settings →           ║
+// ║  Your apps → Web app → firebaseConfig                           ║
+// ╚══════════════════════════════════════════════════════════════════╝
+const FIREBASE_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+// ══════════════════════════════════════════════════════════════════
+
+const DURATION_MS = 6 * 30.4375 * 24 * 60 * 60 * 1000;
+const FB_PATH     = 'snakeTimer/startDate';
+const KEY_PASS    = 'snakeTimer_password';
+const KEY_LOCAL   = 'snakeTimer_startDate';
+
+// ── Firebase init ────────────────────────────────────────────────
+const firebaseConfigured = FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
+let   firebaseReady      = false;
+let   db                 = null;
+
+if (firebaseConfigured) {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    firebaseReady = true;
+  } catch(e) {
+    console.warn('Firebase init error:', e);
+  }
+}
+
+if (!firebaseConfigured) {
+  document.getElementById('config-warning').style.display = 'block';
+}
+
+// ── Auth ─────────────────────────────────────────────────────────
+function getPassword()  { return localStorage.getItem(KEY_PASS) || 'snake123'; }
+function savePassword(p){ localStorage.setItem(KEY_PASS, p); }
+
+// ── Start date storage ───────────────────────────────────────────
+let startDate = null;
+
+async function loadStartDate() {
+  if (firebaseReady) {
+    try {
+      const snap = await db.ref(FB_PATH).get();
+      if (snap.exists()) {
+        startDate = new Date(snap.val());
+        localStorage.setItem(KEY_LOCAL, startDate.toISOString()); // keep local in sync
+        return;
+      }
+      // First run — write today to Firebase
+      const today = new Date();
+      await db.ref(FB_PATH).set(today.toISOString());
+      startDate = today;
+      localStorage.setItem(KEY_LOCAL, today.toISOString());
+      return;
+    } catch(e) {
+      console.warn('Firebase read failed, using localStorage:', e);
+    }
+  }
+  // localStorage fallback
+  const stored = localStorage.getItem(KEY_LOCAL);
+  startDate = stored ? new Date(stored) : new Date();
+  if (!stored) localStorage.setItem(KEY_LOCAL, startDate.toISOString());
+}
+
+async function saveStartDate(d) {
+  startDate = d;
+  localStorage.setItem(KEY_LOCAL, d.toISOString());
+  if (firebaseReady) {
+    try {
+      await db.ref(FB_PATH).set(d.toISOString());
+    } catch(e) {
+      console.warn('Firebase write failed:', e);
+    }
+  }
+}
+
+// ── Countdown ────────────────────────────────────────────────────
+const MESSAGES = [
+  ['🌟', "Amazing start — every tidy room is a step closer to your snake!"],
+  ['💪', "Keep it up! Consistency is the key — you're doing great!"],
+  ['🐍', "Halfway there! Your future snake is waiting patiently…"],
+  ['🎉', "The finish line is in sight — don't stop now!"],
+  ['🏆', "Almost there! Your snake is almost ready to come home!"],
+];
+
+let prevMonths = null, prevDays = null, prevHours = null;
+
+function update() {
+  if (!startDate) return;
+  const now  = new Date();
+  const end  = new Date(startDate.getTime() + DURATION_MS);
+  const remaining = end - now;
+  const elapsed   = now - startDate;
+  const pct = Math.min(100, Math.max(0, (elapsed / DURATION_MS) * 100));
+
+  document.getElementById('started-on').textContent =
+    startDate.toLocaleDateString('en-IE', { day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('progress-bar').style.width = pct.toFixed(2) + '%';
+  document.getElementById('progress-label').textContent = pct.toFixed(1) + '% of the way there!';
+
+  const card = document.getElementById('main-card');
+  if (remaining <= 0) {
+    card.classList.add('completed');
+    ['cd-months','cd-days','cd-hours'].forEach(id => document.getElementById(id).textContent = '0');
+    document.getElementById('motivational-msg').innerHTML =
+      '🎊 Congratulations! You kept your rooms clean for 6 months! Time for a snake!';
+    return;
+  }
+  card.classList.remove('completed');
+
+  const totalDays = Math.floor(remaining / (1000 * 3600 * 24));
+  const remMonths = Math.floor(totalDays / 30.4375);
+  const remDays   = Math.floor(totalDays % 30.4375);
+  const remHours  = Math.floor(remaining / (1000 * 3600)) % 24;
+
+  function bump(id, val, prev) {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    if (prev !== null && val !== prev) {
+      el.classList.add('bump');
+      setTimeout(() => el.classList.remove('bump'), 400);
+    }
+    return val;
+  }
+  prevMonths = bump('cd-months', remMonths, prevMonths);
+  prevDays   = bump('cd-days',   remDays,   prevDays);
+  prevHours  = bump('cd-hours',  remHours,  prevHours);
+
+  const msgIdx = Math.min(Math.floor(pct / 20), MESSAGES.length - 1);
+  document.getElementById('motivational-msg').innerHTML =
+    `<span>${MESSAGES[msgIdx][0]}</span> ${MESSAGES[msgIdx][1]}`;
+}
+
+// ── Boot ─────────────────────────────────────────────────────────
+(async () => {
+  await loadStartDate();
+  document.getElementById('loading-overlay').style.display = 'none';
+  update();
+  setInterval(update, 10000);
+
+  // Live sync: if another device resets, this page updates in real-time
+  if (firebaseReady) {
+    db.ref(FB_PATH).on('value', snap => {
+      if (!snap.exists()) return;
+      const incoming = new Date(snap.val());
+      if (!startDate || incoming.toISOString() !== startDate.toISOString()) {
+        startDate = incoming;
+        localStorage.setItem(KEY_LOCAL, startDate.toISOString());
+        update();
+      }
+    });
+  }
+})();
+
+// ── Modal helpers ─────────────────────────────────────────────────
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  clearMsgs();
+
+  if (id === 'panel-firebase') {
+    const badge  = document.getElementById('fb-status-badge');
+    const detail = document.getElementById('fb-status-detail');
+    if (!firebaseConfigured) {
+      badge.textContent = '❌ Not configured';
+      badge.className = 'status-badge bad';
+      detail.textContent = 'Replace the placeholder values in the FIREBASE CONFIG block and redeploy.';
+    } else if (firebaseReady) {
+      badge.textContent = '✅ Connected';
+      badge.className = 'status-badge ok';
+      detail.textContent = 'All devices are sharing the same start date via Firebase.';
+    } else {
+      badge.textContent = '⚠️ Config error';
+      badge.className = 'status-badge warn';
+      detail.textContent = 'Config found but connection failed. Double-check your databaseURL and apiKey values.';
+    }
+  }
+}
+
+function clearMsgs() {
+  document.querySelectorAll('.msg-box').forEach(m => { m.className = 'msg-box'; m.textContent = ''; });
+  ['login-pw','new-pw1','new-pw2'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg-box ' + type;
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  clearMsgs();
+}
+
+document.getElementById('cog-btn').addEventListener('click', () => {
+  showPanel('panel-login');
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('login-pw').focus(), 50);
+});
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+document.getElementById('login-pw').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function doLogin() {
+  if (document.getElementById('login-pw').value === getPassword()) {
+    showPanel('panel-admin');
+  } else {
+    showMsg('login-msg', 'Wrong password — try again!', 'error');
+    document.getElementById('login-pw').value = '';
+    document.getElementById('login-pw').focus();
+  }
+}
+
+function changePassword() {
+  const p1 = document.getElementById('new-pw1').value.trim();
+  const p2 = document.getElementById('new-pw2').value.trim();
+  if (!p1)          return showMsg('pw-msg', 'Please enter a new password.', 'error');
+  if (p1.length < 4) return showMsg('pw-msg', 'Password must be at least 4 characters.', 'error');
+  if (p1 !== p2)    return showMsg('pw-msg', "Passwords don't match!", 'error');
+  savePassword(p1);
+  document.getElementById('new-pw1').value = '';
+  document.getElementById('new-pw2').value = '';
+  showMsg('pw-msg', '✓ Password updated!', 'success');
+}
+
+function confirmReset() { showPanel('panel-confirm'); }
+
+async function doReset() {
+  await saveStartDate(new Date());
+  update();
+  showPanel('panel-admin');
+  showMsg('reset-msg', '✓ Timer reset to today and synced to cloud!', 'success');
+}
+</script>
+</body>
+</html>
